@@ -1,0 +1,14 @@
+{
+  "name": "IanBot",
+  "version": "1.0",
+  "authors": [
+    "Ian"
+  ],
+  "description": "TODO",
+  "homepage": "",
+  "countryCodes": [
+    "id"
+  ],
+  "platform": ".Net 6.0",
+  "programmingLang": "C# 10.0"
+}
