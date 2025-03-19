@@ -45,13 +45,8 @@ public class IanBot : Bot
         ScanColor = colors.ScanColor;
         BulletColor = colors.BulletColor;
 
-        // Send RobotColors object to every member in the team
-        BroadcastTeamMessage(colors);
-
         // Set the radar to turn right forever
-        SetTurnRadarRight(Double.PositiveInfinity);
-
-
+        // SetTurnRadarRight(Double.PositiveInfinity);
 
         // Repeat while the bot is running
         while (IsRunning)
@@ -60,16 +55,12 @@ public class IanBot : Bot
             // // TurnGunRight(360);
             // Back(50);
             // // TurnGunRight(360);
-            SetRescan();
-            Forward(100);
-            TurnRight(45);
-            Forward(100);
-            Back(50);
-            if (NearWall())
-            {
-                TurnRight(90);
-                Forward(100);
-            }
+            TurnRadarRight(360);
+            FireAtWill();
+            // Forward(100);
+            // TurnRight(45);
+            // Forward(100);
+            // Back(50);
         }
     }
 
@@ -84,21 +75,21 @@ public class IanBot : Bot
             weakestEnemyY = evt.Y;
         }
 
-        if (weakestEnemy != -1)
-        {
-            double bearing = BearingTo(weakestEnemyX, weakestEnemyY); 
-            double gunBearing = NormalizeRelativeAngle(bearing-GunDirection); 
-            //TurnGunRight(gunBearing);
-            TurnRight(gunBearing);
-            if (DistanceTo(evt.X, evt.Y) < 50)
-            {
-                Fire(3);
-            }
-            else
-            {
-                Fire(1);
-            }
-        }
+        // if (weakestEnemy != -1)
+        // {
+        //     double bearing = BearingTo(weakestEnemyX, weakestEnemyY); 
+        //     double gunBearing = NormalizeRelativeAngle(bearing-GunDirection); 
+        //     //TurnGunRight(gunBearing);
+        //     TurnRight(gunBearing);
+        //     if (DistanceTo(evt.X, evt.Y) < 50)
+        //     {
+        //         Fire(3);
+        //     }
+        //     else
+        //     {
+        //         Fire(1);
+        //     }
+        // }
     }
 
 
@@ -121,10 +112,25 @@ public class IanBot : Bot
         }
     }
 
-    public bool NearWall()
+    private void FireAtWill()
     {
-        return X < 50 || X > ArenaWidth - 50 || 
-               Y < 50 || Y > ArenaHeight - 50;
+        if (weakestEnemy != -1)
+        {
+            double bearing = DirectionTo(weakestEnemyX, weakestEnemyY); 
+            double gunBearing = NormalizeRelativeAngle(bearing-GunDirection); 
+            //TurnGunRight(gunBearing);
+            TurnGunLeft(gunBearing);
+            if (DistanceTo(weakestEnemyX, weakestEnemyY) < 50)
+            {
+                Fire(3);
+            }
+            else
+            {
+                Fire(1);
+            }
+            weakestEnemy = -1;
+            weakestEnergy = double.MaxValue;
+        }
     }
 }
 
