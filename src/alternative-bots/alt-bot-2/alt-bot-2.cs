@@ -10,6 +10,9 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 public class IanBot : Bot
 {
+    private int weakestEnemy = -1;
+    private double weakestEnergy = double.MaxValue;
+    private double weakestEnemyX, weakestEnemyY;
     // The main method starts our bot
     static void Main(string[] args)
     {
@@ -48,38 +51,54 @@ public class IanBot : Bot
         // Set the radar to turn right forever
         SetTurnRadarRight(Double.PositiveInfinity);
 
-        // Independent Gun and Radar Movement
-        setAdjustGunForRobotTurn(true);
-        setAdjustRadarForGunTurn(true);
+
 
         // Repeat while the bot is running
-        // while (IsRunning)
-        // {
-        //     Forward(100);
-        //     TurnGunRight(360);
-        //     Back(100);
-        //     TurnGunRight(360);
-        // }
+        while (IsRunning)
+        {
+            // Forward(50);
+            // // TurnGunRight(360);
+            // Back(50);
+            // // TurnGunRight(360);
+            SetRescan();
+            Forward(100);
+            TurnRight(45);
+            Forward(100);
+            Back(50);
+            if (NearWall())
+            {
+                TurnRight(90);
+                Forward(100);
+            }
+        }
     }
 
     // Called when we scanned a bot -> Send enemy position to teammates
     public override void OnScannedBot(ScannedBotEvent evt)
     {
-        // We scanned a teammate -> ignore
-        if (IsTeammate(evt.ScannedBotId))
+        if (evt.Energy < weakestEnergy)
         {
-            return;
+            weakestEnergy = evt.Energy;
+            weakestEnemy = evt.ScannedBotId;
+            weakestEnemyX = evt.X;
+            weakestEnemyY = evt.Y;
         }
-        // If scanned an enemy
-        double distance = e.getDistance();
-        double firePower = Math.Min(500 / distance, 3);
-        setTurnGunRight(getHeading() - getGunHeading() + e.getBearing());
-        fire(firePower);
 
-        setTurnRight(e.getBearing());
-        setAhead(100);
-        // Send enemy position to teammates
-        // BroadcastTeamMessage(new Point(evt.X, evt.Y));
+        if (weakestEnemy != -1)
+        {
+            double bearing = BearingTo(weakestEnemyX, weakestEnemyY); 
+            double gunBearing = NormalizeRelativeAngle(bearing-GunDirection); 
+            //TurnGunRight(gunBearing);
+            TurnRight(gunBearing);
+            if (DistanceTo(evt.X, evt.Y) < 50)
+            {
+                Fire(3);
+            }
+            else
+            {
+                Fire(1);
+            }
+        }
     }
 
 
@@ -91,6 +110,21 @@ public class IanBot : Bot
 
         // Turn perpendicular to the bullet direction
         TurnLeft(90 - bulletBearing);
+    }
+
+    public override void OnBotDeath(BotDeathEvent evt)
+    {
+        if (evt.VictimId == weakestEnemy)
+        {
+            weakestEnemy = -1;
+            weakestEnergy = double.MaxValue;
+        }
+    }
+
+    public bool NearWall()
+    {
+        return X < 50 || X > ArenaWidth - 50 || 
+               Y < 50 || Y > ArenaHeight - 50;
     }
 }
 
