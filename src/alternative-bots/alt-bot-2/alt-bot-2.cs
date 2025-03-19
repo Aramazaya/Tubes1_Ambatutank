@@ -6,7 +6,7 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // IanBot
 // ------------------------------------------------------------------
-// <DESKRIPSI ALGORITMA GREEDY>
+// Scan area for enemy. Shoot at enemy depending on distance
 // ------------------------------------------------------------------
 public class IanBot : Bot
 {
@@ -48,14 +48,18 @@ public class IanBot : Bot
         // Set the radar to turn right forever
         SetTurnRadarRight(Double.PositiveInfinity);
 
+        // Independent Gun and Radar Movement
+        setAdjustGunForRobotTurn(true);
+        setAdjustRadarForGunTurn(true);
+
         // Repeat while the bot is running
-        while (IsRunning)
-        {
-            Forward(100);
-            TurnGunRight(360);
-            Back(100);
-            TurnGunRight(360);
-        }
+        // while (IsRunning)
+        // {
+        //     Forward(100);
+        //     TurnGunRight(360);
+        //     Back(100);
+        //     TurnGunRight(360);
+        // }
     }
 
     // Called when we scanned a bot -> Send enemy position to teammates
@@ -66,9 +70,16 @@ public class IanBot : Bot
         {
             return;
         }
+        // If scanned an enemy
+        double distance = e.getDistance();
+        double firePower = Math.Min(500 / distance, 3);
+        setTurnGunRight(getHeading() - getGunHeading() + e.getBearing());
+        fire(firePower);
 
+        setTurnRight(e.getBearing());
+        setAhead(100);
         // Send enemy position to teammates
-        BroadcastTeamMessage(new Point(evt.X, evt.Y));
+        // BroadcastTeamMessage(new Point(evt.X, evt.Y));
     }
 
 
