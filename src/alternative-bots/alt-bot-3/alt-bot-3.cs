@@ -10,6 +10,10 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 public class AramBot : Bot
 {
+    private double closest = double.POSITIVE_INFINITY;
+    private double closestBearing = 0;
+    private bool hit = false;
+    private string perpName = null;
     // The main method starts our bot
     static void Main(string[] args)
     {
@@ -50,26 +54,36 @@ public class AramBot : Bot
 
         // Repeat while the bot is running
         while (IsRunning)
-        {
-            Forward(100);
-            TurnGunRight(360);
-            Back(100);
-            TurnGunRight(360);
+        {  
+            execute();
         }
     }
 
     // Called when we scanned a bot -> Send enemy position to teammates
     public override void OnScannedBot(ScannedBotEvent evt)
     {
-        // We scanned a teammate -> ignore
-        if (IsTeammate(evt.ScannedBotId))
-        {
-            return;
+        if (!hit){
+            if (evt.Distance < closest){
+                closest = evt.getDistance();
+                closestBearing = evt.getBearing();
+                absoluteBearing = getHeading() + closestBearing;
+                gunTurnAmount = normalRelativeAngleDegrees(absoluteBearing - getGunHeading())
+                setTurnGunRight(gunTurnAmount);
+                if (getGunHeat() == 0 && gunTurnAmount < 10 && gunTurnAmount > -10){
+                    Fire(3);
+                }
+            }
+        } else {
+            if (evt.getName() == perpName){
+                absoluteBearing = getHeading() + closestBearing;
+                turnAmount = normalRelativeAngleDegrees(absoluteBearing - getGunHeading())
+                setTurnRight(turnAmount);
+                setAhead(10000);
+                hit = false;
+                perpName = null;
+            }
         }
-
-        // Send enemy position to teammates
-        BroadcastTeamMessage(new Point(evt.X, evt.Y));
-    }
+    }   
 
 
     // Called when we have been hit by a bullet -> turn perpendicular to the bullet direction
@@ -79,7 +93,9 @@ public class AramBot : Bot
         double bulletBearing = CalcBearing(evt.Bullet.Direction);
 
         // Turn perpendicular to the bullet direction
-        TurnLeft(90 - bulletBearing);
+        setTurnRight(bulletBearing);
+        hit = true;
+        perpName = evt.getName();
     }
 }
 
