@@ -28,13 +28,13 @@ public class IanBot : Bot
         // Prepare robot colors to send to teammates
         var colors = new RobotColors();
 
-        colors.BodyColor = Color.Red;
-        colors.TracksColor = Color.Cyan;
-        colors.TurretColor = Color.Red;
-        colors.GunColor = Color.Yellow;
-        colors.RadarColor = Color.Red;
-        colors.ScanColor = Color.Yellow;
-        colors.BulletColor = Color.Yellow;
+        colors.BodyColor = Color.DarkTurquoise;
+        colors.TracksColor = Color.SeaShell;
+        colors.TurretColor = Color.MintCream;
+        colors.GunColor = Color.MintCream;
+        colors.RadarColor = Color.SkyBlue;
+        colors.ScanColor = Color.LightSkyBlue;
+        colors.BulletColor = Color.LimeGreen;
 
         // Set the color of this robot containing the robot colors
         BodyColor = colors.BodyColor;
@@ -74,22 +74,6 @@ public class IanBot : Bot
             weakestEnemyX = evt.X;
             weakestEnemyY = evt.Y;
         }
-
-        // if (weakestEnemy != -1)
-        // {
-        //     double bearing = BearingTo(weakestEnemyX, weakestEnemyY); 
-        //     double gunBearing = NormalizeRelativeAngle(bearing-GunDirection); 
-        //     //TurnGunRight(gunBearing);
-        //     TurnRight(gunBearing);
-        //     if (DistanceTo(evt.X, evt.Y) < 50)
-        //     {
-        //         Fire(3);
-        //     }
-        //     else
-        //     {
-        //         Fire(1);
-        //     }
-        // }
     }
 
 
@@ -98,9 +82,8 @@ public class IanBot : Bot
     {
         // Calculate the bullet bearing
         double bulletBearing = CalcBearing(evt.Bullet.Direction);
-
-        // Turn perpendicular to the bullet direction
-        TurnLeft(90 - bulletBearing);
+        TurnRight(NormalizeRelativeAngle(90 - bulletBearing)); // Perpendicular move
+        Back(50); // Move to evade further shots
     }
 
     public override void OnBotDeath(BotDeathEvent evt)
@@ -111,6 +94,21 @@ public class IanBot : Bot
             weakestEnergy = double.MaxValue;
         }
     }
+
+    public override void OnHitBot(HitBotEvent evt)
+    {
+        if (evt.Energy < weakestEnergy)
+        {
+            weakestEnergy = evt.Energy;
+            weakestEnemy = evt.VictimId;
+            weakestEnemyX = evt.X;
+            weakestEnemyY = evt.Y;
+        }
+
+        SetTurnRight(NormalizeRelativeAngle(DirectionTo(evt.X, evt.Y) - Direction));
+        Forward(100); // RAM THEM!!
+    }
+
 
     private void FireAtWill()
     {
@@ -128,9 +126,26 @@ public class IanBot : Bot
             {
                 Fire(1);
             }
+            MoveToEnemy(weakestEnemyX, weakestEnemyY);
             weakestEnemy = -1;
             weakestEnergy = double.MaxValue;
         }
+    }
+
+    private void MoveToEnemy(double targetX, double targetY)
+    {
+        double angleToEnemy = DirectionTo(targetX, targetY);
+        TurnLeft(NormalizeRelativeAngle(angleToEnemy-Direction));
+        double offset = 45;
+        SetForward(150);
+        // for (int i = 0; i < 3; i++)
+        // {
+        SetTurnRight(offset);
+        WaitFor(new TurnCompleteCondition(this));
+        SetTurnLeft(2 * offset);
+        WaitFor(new TurnCompleteCondition(this));
+        SetTurnRight(offset);
+        // }
     }
 }
 
@@ -148,6 +163,22 @@ class Point
     {
         X = x;
         Y = y;
+    }
+}
+
+public class TurnCompleteCondition : Condition
+{
+    private readonly Bot bot;
+
+    public TurnCompleteCondition(Bot bot)
+    {
+        this.bot = bot;
+    }
+
+    public override bool Test()
+    {
+        // turn is complete when the remainder of the turn is zero
+        return bot.TurnRemaining == 0;
     }
 }
 
