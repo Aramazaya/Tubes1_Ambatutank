@@ -6,7 +6,7 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // IanBot
 // ------------------------------------------------------------------
-// Scan area for enemy. Shoot at enemy depending on distance
+// Scan area for enemy. Shoot at enemy with the lowest energy
 // ------------------------------------------------------------------
 public class IanBot : Bot
 {
@@ -45,22 +45,12 @@ public class IanBot : Bot
         ScanColor = colors.ScanColor;
         BulletColor = colors.BulletColor;
 
-        // Set the radar to turn right forever
-        // SetTurnRadarRight(Double.PositiveInfinity);
 
         // Repeat while the bot is running
         while (IsRunning)
         {
-            // Forward(50);
-            // // TurnGunRight(360);
-            // Back(50);
-            // // TurnGunRight(360);
             TurnRadarRight(360);
             FireAtWill();
-            // Forward(100);
-            // TurnRight(45);
-            // Forward(100);
-            // Back(50);
         }
     }
 
