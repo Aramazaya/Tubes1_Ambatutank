@@ -10,11 +10,6 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 public class NayakaBot : Bot
 {
-    private const double w1 = 100;
-    private const double w2 = 50;
-    private const double WallMargin = 30;
-    private const int NTitikBantu = 8;
-
     static void Main(string[] args) {
         new NayakaBot().Start();
     }
@@ -35,25 +30,32 @@ public class NayakaBot : Bot
         AdjustGunForBodyTurn = true;
         AdjustRadarForBodyTurn = true;
         AdjustRadarForGunTurn = true;
-
+        RadarTurnRate = 10;
+        TurnRadarRight(Double.PositiveInfinity);
+        
         while (IsRunning) {
-            TurnRadarRight(360);
+            //if (RadarTurnRemaining == 0) {
+            //    SetTurnRadarRight(1);
+            //}
         }
     }
 
 
     public override void OnScannedBot(ScannedBotEvent evt) {
-        double angle = evt.Direction;
-        if (angle <= 50) {
-            TurnGunRight(angle);
-            Fire(1);
+        Console.WriteLine(GunDirection);
+        Console.WriteLine(GunBearingTo(evt.X, evt.Y));
+
+        SetTurnGunLeft(GunBearingTo(evt.X, evt.Y));
+        
+        if (Math.Abs(TurnRemaining) < 10) {
+            Fire(0.3);
         }
+        //Fire(1);
     }
 
 
     public override void OnHitByBullet(HitByBulletEvent evt) {
-        double bulletBearing = CalcBearing(evt.Bullet.Direction);
-        TurnLeft(90 - bulletBearing);
+        Console.WriteLine("Kenak peluru njir");
     }
 
     public override void OnHitWall(HitWallEvent evt) {
