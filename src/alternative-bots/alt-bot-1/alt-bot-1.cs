@@ -6,86 +6,66 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // NayakaBot
 // ------------------------------------------------------------------
-// <DESKRIPSI ALGORITMA GREEDY>
+// DESKRIPSI ALGORITMA GREEDY
 // ------------------------------------------------------------------
 public class NayakaBot : Bot
 {
-    // The main method starts our bot
-    static void Main(string[] args)
-    {
+    private const double w1 = 100;
+    private const double w2 = 50;
+    private const double WallMargin = 30;
+    private const int NTitikBantu = 8;
+
+    static void Main(string[] args) {
         new NayakaBot().Start();
     }
 
-    // Constructor, which loads the bot config file
     NayakaBot() : base(BotInfo.FromFile("alt-bot-1.json")) { }
 
-    // Called when a new round is started -> initialize and do some movement
-    public override void Run()
-    {
-        // Prepare robot colors to send to teammates
-        var colors = new RobotColors();
+    public override void Run() {
+        // Ngatur warna
+        BodyColor = Color.Red;
+        TracksColor = Color.Cyan;
+        TurretColor = Color.Red;
+        GunColor = Color.Yellow;
+        RadarColor = Color.Red;
+        ScanColor = Color.Yellow;
+        BulletColor = Color.Yellow;
 
-        colors.BodyColor = Color.Red;
-        colors.TracksColor = Color.Cyan;
-        colors.TurretColor = Color.Red;
-        colors.GunColor = Color.Yellow;
-        colors.RadarColor = Color.Red;
-        colors.ScanColor = Color.Yellow;
-        colors.BulletColor = Color.Yellow;
+        // Ini buat ngesetting supaya radar, gun, dan body bisa gerak sendiri-sendiri
+        AdjustGunForBodyTurn = true;
+        AdjustRadarForBodyTurn = true;
+        AdjustRadarForGunTurn = true;
 
-        // Set the color of this robot containing the robot colors
-        BodyColor = colors.BodyColor;
-        TracksColor = colors.TracksColor;
-        TurretColor = colors.TurretColor;
-        GunColor = colors.GunColor;
-        RadarColor = colors.RadarColor;
-        ScanColor = colors.ScanColor;
-        BulletColor = colors.BulletColor;
-
-        // Send RobotColors object to every member in the team
-        BroadcastTeamMessage(colors);
-
-        // Set the radar to turn right forever
-        SetTurnRadarRight(Double.PositiveInfinity);
-
-        // Repeat while the bot is running
-        while (IsRunning)
-        {
-            Forward(100);
-            TurnGunRight(360);
-            Back(100);
-            TurnGunRight(360);
+        while (IsRunning) {
+            TurnRadarRight(360);
         }
     }
 
-    // Called when we scanned a bot -> Send enemy position to teammates
-    public override void OnScannedBot(ScannedBotEvent evt)
-    {
-        // We scanned a teammate -> ignore
-        if (IsTeammate(evt.ScannedBotId))
-        {
-            return;
-        }
 
-        // Send enemy position to teammates
-        BroadcastTeamMessage(new Point(evt.X, evt.Y));
+    public override void OnScannedBot(ScannedBotEvent evt) {
+        double angle = evt.Direction;
+        if (angle <= 50) {
+            TurnGunRight(angle);
+            Fire(1);
+        }
     }
 
 
-    // Called when we have been hit by a bullet -> turn perpendicular to the bullet direction
-    public override void OnHitByBullet(HitByBulletEvent evt)
-    {
-        // Calculate the bullet bearing
+    public override void OnHitByBullet(HitByBulletEvent evt) {
         double bulletBearing = CalcBearing(evt.Bullet.Direction);
-
-        // Turn perpendicular to the bullet direction
         TurnLeft(90 - bulletBearing);
     }
+
+    public override void OnHitWall(HitWallEvent evt) {
+        Console.WriteLine("Nabrak tembok njir");
+    }
+
+    public override void OnHitBot(HitBotEvent evt) {
+        Console.WriteLine("Nabrak bot lain njir");
+    }
+
 }
 
-// ------------------------------------------------------------------
-// Communication objects for team messages
-// ------------------------------------------------------------------
 
 // Point (x,y) class
 class Point
@@ -98,16 +78,4 @@ class Point
         X = x;
         Y = y;
     }
-}
-
-// Robot colors
-class RobotColors
-{
-    public Color BodyColor { get; set; }
-    public Color TracksColor { get; set; }
-    public Color TurretColor { get; set; }
-    public Color GunColor { get; set; }
-    public Color RadarColor { get; set; }
-    public Color ScanColor { get; set; }
-    public Color BulletColor { get; set; }
 }
