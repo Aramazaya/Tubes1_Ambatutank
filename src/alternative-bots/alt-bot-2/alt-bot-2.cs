@@ -89,14 +89,9 @@ public class IanBot : Bot
     {
         if (evt.Energy < weakestEnergy)
         {
-            weakestEnergy = evt.Energy;
-            weakestEnemy = evt.VictimId;
-            weakestEnemyX = evt.X;
-            weakestEnemyY = evt.Y;
+            SetTurnRight(NormalizeRelativeAngle(DirectionTo(evt.X, evt.Y) - Direction));
+            Forward(100); // RAM THEM!!
         }
-
-        SetTurnRight(NormalizeRelativeAngle(DirectionTo(evt.X, evt.Y) - Direction));
-        Forward(100); // RAM THEM!!
     }
 
 
