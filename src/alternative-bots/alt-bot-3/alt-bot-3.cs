@@ -6,80 +6,88 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // AramBot
 // ------------------------------------------------------------------
-// <DESKRIPSI ALGORITMA GREEDY>
+// Bot akan melakukan ramming ke arah peluru ketika kena hit, Bot akan menembak dengan power 3 musuh terdekat
 // ------------------------------------------------------------------
 public class AramBot : Bot
 {
-    // The main method starts our bot
+    private int perpID = 0;
+    private Point closestPoint = null;
+    private double closest = double.MaxValue;
+    private double closestDir = 0.0;
+    private bool hit = false;
+    private Point perpDir = null;
     static void Main(string[] args)
     {
         new AramBot().Start();
     }
-
-    // Constructor, which loads the bot config file
     AramBot() : base(BotInfo.FromFile("alt-bot-3.json")) { }
-
-    // Called when a new round is started -> initialize and do some movement
     public override void Run()
     {
-        // Prepare robot colors to send to teammates
-        var colors = new RobotColors();
-
-        colors.BodyColor = Color.Red;
-        colors.TracksColor = Color.Cyan;
-        colors.TurretColor = Color.Red;
-        colors.GunColor = Color.Yellow;
-        colors.RadarColor = Color.Red;
-        colors.ScanColor = Color.Yellow;
-        colors.BulletColor = Color.Yellow;
-
-        // Set the color of this robot containing the robot colors
-        BodyColor = colors.BodyColor;
-        TracksColor = colors.TracksColor;
-        TurretColor = colors.TurretColor;
-        GunColor = colors.GunColor;
-        RadarColor = colors.RadarColor;
-        ScanColor = colors.ScanColor;
-        BulletColor = colors.BulletColor;
-
-        // Send RobotColors object to every member in the team
-        BroadcastTeamMessage(colors);
-
-        // Set the radar to turn right forever
-        SetTurnRadarRight(Double.PositiveInfinity);
-
-        // Repeat while the bot is running
-        while (IsRunning)
-        {
-            Forward(100);
-            TurnGunRight(360);
-            Back(100);
-            TurnGunRight(360);
+        BodyColor = Color.Red;
+        TracksColor = Color.Cyan;
+        TurretColor = Color.Red;
+        GunColor = Color.Black;
+        RadarColor = Color.Red;
+        ScanColor = Color.Yellow;
+        BulletColor = Color.Black;
+        while (IsRunning){
+            if (!hit)           //Ketika Bot tidak sedang melakukan ramming, bot akan menembak musuh terdekat dan diam
+            {
+                TurnRadarRight(360);
+                if (GunHeat == 0)
+                {
+                    closestDir = DirectionTo(closestPoint.X, closestPoint.Y);
+                    double bearing = NormalizeRelativeAngle(closestDir - GunDirection);
+                    TurnGunLeft(bearing);
+                    Fire(3);
+                }
+                closest = double.MaxValue;
+                closestDir = 0.0;
+            }
         }
     }
-
-    // Called when we scanned a bot -> Send enemy position to teammates
     public override void OnScannedBot(ScannedBotEvent evt)
     {
-        // We scanned a teammate -> ignore
-        if (IsTeammate(evt.ScannedBotId))
-        {
-            return;
+        if (!hit){                                              //Ketika Bot tidak sedang ramming, Bot akan mencari scanned enemy terdekat untuk dijadikan target tembakan
+            Point p1 = new Point(evt.X, evt.Y);
+            Point p2 = new Point(X, Y);
+            double eventDistance = FindDistance(p1, p2);
+            if (eventDistance < closest){
+                closest = eventDistance;
+                closestPoint = new Point(evt.X, evt.Y);
+            }
+        } else {                                                //Ketika Bot terkena Hit, Bot akan melakukan ramming
+            if (evt.ScannedBotId == perpID){
+                perpDir = new Point(evt.X, evt.Y);
+                TurnLeft(NormalizeRelativeAngle(DirectionTo(perpDir.X, perpDir.Y)-Direction));
+                Forward(500);
+                hit = false;
+                perpID = 0;
+            }
         }
-
-        // Send enemy position to teammates
-        BroadcastTeamMessage(new Point(evt.X, evt.Y));
-    }
-
-
-    // Called when we have been hit by a bullet -> turn perpendicular to the bullet direction
-    public override void OnHitByBullet(HitByBulletEvent evt)
+    }   
+    public override void OnHitByBullet(HitByBulletEvent evt)            //Ketika Bot terkena tembakan, Bot akan melakukan Radar search
     {
-        // Calculate the bullet bearing
-        double bulletBearing = CalcBearing(evt.Bullet.Direction);
+        perpID = evt.Bullet.OwnerId;
+        hit = true;
+        TurnRadarRight(360);
 
-        // Turn perpendicular to the bullet direction
-        TurnLeft(90 - bulletBearing);
+    }
+    public override void OnHitBot(HitBotEvent botHitBotEvent)           //Ketika Bot mengenai musuh, Bot akan merotasi turret dan menembak ke arah victim bot
+    {
+        TurnRadarRight(45);
+        TurnRadarLeft(90);
+        closestDir = DirectionTo(closestPoint.X, closestPoint.Y);
+        double bearing = NormalizeRelativeAngle(closestDir - GunDirection);
+        TurnGunLeft(bearing);
+        if (GunHeat == 0) { Fire(3); }
+    }
+    public override void OnHitWall(HitWallEvent botHitWallEvent)        //Ketika Bot mengenai wall, lakukan mundur 50 langkah
+    {
+        Back(50);
+    }
+    static double FindDistance(Point p1, Point p2){
+        return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
     }
 }
 
@@ -88,6 +96,7 @@ public class AramBot : Bot
 // ------------------------------------------------------------------
 
 // Point (x,y) class
+
 class Point
 {
     public double X { get; set; }
@@ -98,16 +107,4 @@ class Point
         X = x;
         Y = y;
     }
-}
-
-// Robot colors
-class RobotColors
-{
-    public Color BodyColor { get; set; }
-    public Color TracksColor { get; set; }
-    public Color TurretColor { get; set; }
-    public Color GunColor { get; set; }
-    public Color RadarColor { get; set; }
-    public Color ScanColor { get; set; }
-    public Color BulletColor { get; set; }
 }

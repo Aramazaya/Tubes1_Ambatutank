@@ -1,10 +1,10 @@
 {
-  "name": "AramBot",
+  "name": "Ambatutank",
   "version": "1.0",
   "authors": [
     "Aram"
   ],
-  "description": "TODO",
+  "description": "A tank that shoots closest enemy and keeps grudges",
   "homepage": "",
   "countryCodes": [
     "id"

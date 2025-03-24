@@ -6,10 +6,13 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // IanBot
 // ------------------------------------------------------------------
-// Scan area for enemy. Shoot at enemy depending on distance
+// Scan area for enemy. Shoot at enemy with the lowest energy
 // ------------------------------------------------------------------
 public class IanBot : Bot
 {
+    private int weakestEnemy = -1;
+    private double weakestEnergy = double.MaxValue;
+    private double weakestEnemyX, weakestEnemyY;
     // The main method starts our bot
     static void Main(string[] args)
     {
@@ -25,13 +28,13 @@ public class IanBot : Bot
         // Prepare robot colors to send to teammates
         var colors = new RobotColors();
 
-        colors.BodyColor = Color.Red;
-        colors.TracksColor = Color.Cyan;
-        colors.TurretColor = Color.Red;
-        colors.GunColor = Color.Yellow;
-        colors.RadarColor = Color.Red;
-        colors.ScanColor = Color.Yellow;
-        colors.BulletColor = Color.Yellow;
+        colors.BodyColor = Color.DarkTurquoise;
+        colors.TracksColor = Color.SeaShell;
+        colors.TurretColor = Color.MintCream;
+        colors.GunColor = Color.MintCream;
+        colors.RadarColor = Color.SkyBlue;
+        colors.ScanColor = Color.LightSkyBlue;
+        colors.BulletColor = Color.LimeGreen;
 
         // Set the color of this robot containing the robot colors
         BodyColor = colors.BodyColor;
@@ -42,44 +45,25 @@ public class IanBot : Bot
         ScanColor = colors.ScanColor;
         BulletColor = colors.BulletColor;
 
-        // Send RobotColors object to every member in the team
-        BroadcastTeamMessage(colors);
-
-        // Set the radar to turn right forever
-        SetTurnRadarRight(Double.PositiveInfinity);
-
-        // Independent Gun and Radar Movement
-        setAdjustGunForRobotTurn(true);
-        setAdjustRadarForGunTurn(true);
 
         // Repeat while the bot is running
-        // while (IsRunning)
-        // {
-        //     Forward(100);
-        //     TurnGunRight(360);
-        //     Back(100);
-        //     TurnGunRight(360);
-        // }
+        while (IsRunning)
+        {
+            TurnRadarRight(360);
+            FireAtWill();
+        }
     }
 
     // Called when we scanned a bot -> Send enemy position to teammates
     public override void OnScannedBot(ScannedBotEvent evt)
     {
-        // We scanned a teammate -> ignore
-        if (IsTeammate(evt.ScannedBotId))
+        if (evt.Energy < weakestEnergy)
         {
-            return;
+            weakestEnergy = evt.Energy;
+            weakestEnemy = evt.ScannedBotId;
+            weakestEnemyX = evt.X;
+            weakestEnemyY = evt.Y;
         }
-        // If scanned an enemy
-        double distance = e.getDistance();
-        double firePower = Math.Min(500 / distance, 3);
-        setTurnGunRight(getHeading() - getGunHeading() + e.getBearing());
-        fire(firePower);
-
-        setTurnRight(e.getBearing());
-        setAhead(100);
-        // Send enemy position to teammates
-        // BroadcastTeamMessage(new Point(evt.X, evt.Y));
     }
 
 
@@ -88,9 +72,65 @@ public class IanBot : Bot
     {
         // Calculate the bullet bearing
         double bulletBearing = CalcBearing(evt.Bullet.Direction);
+        TurnRight(NormalizeRelativeAngle(90 - bulletBearing)); // Perpendicular move
+        Back(50); // Move to evade further shots
+    }
 
-        // Turn perpendicular to the bullet direction
-        TurnLeft(90 - bulletBearing);
+    public override void OnBotDeath(BotDeathEvent evt)
+    {
+        if (evt.VictimId == weakestEnemy)
+        {
+            weakestEnemy = -1;
+            weakestEnergy = double.MaxValue;
+        }
+    }
+
+    public override void OnHitBot(HitBotEvent evt)
+    {
+        if (evt.Energy < weakestEnergy)
+        {
+            SetTurnRight(NormalizeRelativeAngle(DirectionTo(evt.X, evt.Y) - Direction));
+            Forward(100); // RAM THEM!!
+        }
+    }
+
+
+    private void FireAtWill()
+    {
+        if (weakestEnemy != -1)
+        {
+            double bearing = DirectionTo(weakestEnemyX, weakestEnemyY); 
+            double gunBearing = NormalizeRelativeAngle(bearing-GunDirection); 
+            //TurnGunRight(gunBearing);
+            TurnGunLeft(gunBearing);
+            if (DistanceTo(weakestEnemyX, weakestEnemyY) < 50)
+            {
+                Fire(3);
+            }
+            else
+            {
+                Fire(1);
+            }
+            MoveToEnemy(weakestEnemyX, weakestEnemyY);
+            weakestEnemy = -1;
+            weakestEnergy = double.MaxValue;
+        }
+    }
+
+    private void MoveToEnemy(double targetX, double targetY)
+    {
+        double angleToEnemy = DirectionTo(targetX, targetY);
+        TurnLeft(NormalizeRelativeAngle(angleToEnemy-Direction));
+        double offset = 45;
+        SetForward(150);
+        // for (int i = 0; i < 3; i++)
+        // {
+        SetTurnRight(offset);
+        WaitFor(new TurnCompleteCondition(this));
+        SetTurnLeft(2 * offset);
+        WaitFor(new TurnCompleteCondition(this));
+        SetTurnRight(offset);
+        // }
     }
 }
 
@@ -108,6 +148,22 @@ class Point
     {
         X = x;
         Y = y;
+    }
+}
+
+public class TurnCompleteCondition : Condition
+{
+    private readonly Bot bot;
+
+    public TurnCompleteCondition(Bot bot)
+    {
+        this.bot = bot;
+    }
+
+    public override bool Test()
+    {
+        // turn is complete when the remainder of the turn is zero
+        return bot.TurnRemaining == 0;
     }
 }
 
