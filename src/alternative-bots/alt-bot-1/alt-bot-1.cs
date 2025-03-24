@@ -11,14 +11,18 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 public class NayakaBot : Bot
 {
-    bool FoundMungsuh = false;
-    List<TitikGaya> TitikGaya = new List<TitikGaya>();
+    private bool FoundMungsuh = false;
+    private Dictionary<int, TitikGaya> TitikGaya = new();
+
     static void Main(string[] args) {
         new NayakaBot().Start();
     }
 
     NayakaBot() : base(BotInfo.FromFile("alt-bot-1.json")) { }
 
+    /// <summary>
+    /// Fungsi bawaan dari Robocode, di sini tempat bot jalan
+    /// </summary>
     public override void Run() {
         // Ngatur warna
         BodyColor = Color.Red;
@@ -40,8 +44,8 @@ public class NayakaBot : Bot
 
             // ngejumlahin semua gaya yang diterima di list titikGaya
             Vektor totalGaya = new Vektor(0, 0);
-            for (int i = 0; i < TitikGaya.Count; i++) {
-                totalGaya += TitikGaya[i].gaya;
+            foreach (var Titik in TitikGaya) {
+                totalGaya += Titik.Value.Gaya;
             }
 
             // ngarahin bot ke arah totalGaya
@@ -58,18 +62,13 @@ public class NayakaBot : Bot
 
     public override void OnScannedBot(ScannedBotEvent e) {
         // cek apakah bot yang ketemu itu bot yang udah pernah ketemu atau belum
-        bool FoundGaya = false;
-        for (int i = 0; i < TitikGaya.Count; i++) {
-            if (TitikGaya[i].id == e.ScannedBotId) {
-                FoundGaya = true;
-         // kalo udah pernah ketemu, update gayanya
-                TitikGaya[i].gaya = new Vektor(this.X, this.Y, this.Energy, e.X, e.Y, e.Energy);
-                break;
-            }
+        if (TitikGaya.ContainsKey(e.ScannedBotId)) {
+            // kalo udah ada diupdate
+            TitikGaya[e.ScannedBotId] = new TitikGaya(this.X, this.Y, this.Energy, e.X, e.Y, e.Energy);
         }
-        // kalo belum pernah ketemu, tambahin ke list
-        if (!FoundGaya) {
-            TitikGaya.Add(new TitikGaya(this.X, this.Y, this.Energy, e.ScannedBotId, e.X, e.Y, e.Energy));
+        else {
+            // kalo belum ada, tambahin
+            TitikGaya.Add(e.ScannedBotId, new TitikGaya(this.X, this.Y, this.Energy, e.X, e.Y, e.Energy));
         }
 
 
@@ -92,9 +91,32 @@ public class NayakaBot : Bot
         Console.WriteLine("Nabrak bot lain njir");
     }
 
-    // ini bahasa jawanya musuh
-    class MungsuhBot {
-        private NayakaBot parentBot;
+    public override void OnBotDeath(BotDeathEvent b) {
+        // ngehapus bot yang mati
+        TitikGaya.Remove(b.VictimId);
+    }
+
+    /// <summary>
+    /// Fungsi pembantu
+    /// </summary>
+
+    private static double ScaleBulletPower(double distance) {
+        double maxPower = 3.0;
+        double minDistance = 0;
+        double maxDistance = 60;
+        return maxPower * (1 - (distance - minDistance) / (maxDistance - minDistance));
+    }
+
+}
+
+/// <summary>
+/// sorry males bikin file baru
+/// di bawah ini isinya class-class pembantu
+/// </summary>
+
+// bot buat nyimpen data musuh yang lagi diincer
+// ini bahasa jawanya musuh
+class MungsuhBot {
         public int ID { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
@@ -103,8 +125,7 @@ public class NayakaBot : Bot
         public double Speed { get; set; }
         public double Distance { get; set; }
 
-        public MungsuhBot(NayakaBot parentBot) {
-            this.parentBot = parentBot;
+        public MungsuhBot() {
             this.ID = -1;
             this.X = -1;
             this.Y = -1;
@@ -113,8 +134,7 @@ public class NayakaBot : Bot
             this.Speed = -1;
             this.Distance = -1;
         }
-        public MungsuhBot(NayakaBot parentBot, int id, double x, double y, double energy, double direction, double speed, double distance) {
-            this.parentBot = parentBot;
+        public MungsuhBot(int id, double x, double y, double energy, double direction, double speed, double distance) {
             this.ID = id;
             this.X = x;
             this.Y = y;
@@ -134,21 +154,20 @@ public class NayakaBot : Bot
             this.Distance = -1;
         }
 
-        public void Update(ScannedBotEvent e) {
+        public void Update(ScannedBotEvent e, double BotX, double BotY) {
             this.ID = e.ScannedBotId;
             this.X = e.X;
             this.Y = e.Y;
             this.Energy = e.Energy;
             this.Direction = e.Direction;
             this.Speed = e.Speed;
-            this.Distance = Mtk.CalcDistance(this.X, this.Y, parentBot.X, parentBot.Y);
+            this.Distance = Mtk.CalcDistance(this.X, this.Y, BotX, BotY);
         }
 
         public bool IsEmpty() {
             return this.ID == -1;
         }
     }
-}
 
 
 class Vektor
@@ -195,32 +214,35 @@ class Vektor
         return a.X * b.X + a.Y * b.Y;
     }
 
-    public double getLength() {
+    // ini buat scalar product
+    public static Vektor operator *(Vektor a, double b)
+    {
+        return new Vektor(a.X * b, a.Y * b);
+    }
+
+    public double GetLength() {
         return Math.Sqrt(this.X * this.X + this.Y * this.Y);
     }
 
-    public double getDirection() {
+    public double GetDirection() {
         return Math.Atan2(this.Y, this.X) + Math.PI / 2;
     }
 }
 
 
 class TitikGaya {
-    public int id { get; set; }
-    public Vektor gaya { get; set; }
-    public TitikGaya(int id, Vektor gaya) {
-        this.id = id;
-        this.gaya = gaya;
+    public Vektor Gaya { get; set; }
+    public TitikGaya(Vektor gaya) {
+        this.Gaya = gaya;
     }
     
-    public TitikGaya(double botX, double botY, double botEnergy, int musuhID, double musuhX, double musuhY, double musuhEnergy) {
+    public TitikGaya(double botX, double botY, double botEnergy, double musuhX, double musuhY, double musuhEnergy) {
         double w1 = 20;
         double w2 = 30;
         double r = Mtk.CalcDistance(botX, botY, musuhX, musuhY);
         double h = musuhEnergy / botEnergy;
         double f = w1 / r + w2 * h;
-        this.id = musuhID;
-        this.gaya = new Vektor(f, Mtk.CalcAngle(botX, botY, musuhX, musuhY, false));
+        this.Gaya = new Vektor(f, Mtk.CalcAngle(botX, botY, musuhX, musuhY, false));
     }
 }
 
