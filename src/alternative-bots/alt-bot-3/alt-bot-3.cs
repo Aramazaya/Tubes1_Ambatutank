@@ -96,7 +96,21 @@ public class AramBot : Bot
 // ------------------------------------------------------------------
 
 // Point (x,y) class
+public class TurnCompleteCondition : Condition
+{
+    private readonly Bot bot;
 
+    public TurnCompleteCondition(Bot bot)
+    {
+        this.bot = bot;
+    }
+
+    public override bool Test()
+    {
+        // turn is complete when the remainder of the turn is zero
+        return bot.TurnRemaining == 0;
+    }
+}
 class Point
 {
     public double X { get; set; }
