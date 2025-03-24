@@ -86,6 +86,10 @@ public class AramBot : Bot
     {
         Back(50);
     }
+    public override void OnDeath(DeathEvent botDeathEvent)
+    {
+        hit = false;
+    }
     static double FindDistance(Point p1, Point p2){
         return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
     }
@@ -121,4 +125,14 @@ class Point
         X = x;
         Y = y;
     }
+}
+class RobotColors
+{
+    public Color BodyColor { get; set; }
+    public Color TracksColor { get; set; }
+    public Color TurretColor { get; set; }
+    public Color GunColor { get; set; }
+    public Color RadarColor { get; set; }
+    public Color ScanColor { get; set; }
+    public Color BulletColor { get; set; }
 }
