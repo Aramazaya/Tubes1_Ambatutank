@@ -7,12 +7,11 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // NayakaBot
 // ------------------------------------------------------------------
-// DESKRIPSI ALGORITMA GREEDY
 // ------------------------------------------------------------------
 public class NayakaBot : Bot
 {
-    private bool FoundMungsuh = false;
     private Dictionary<int, TitikGaya> TitikGaya = new();
+    private MungsuhBot Mungsuh = new();
 
     static void Main(string[] args) {
         new NayakaBot().Start();
@@ -24,7 +23,7 @@ public class NayakaBot : Bot
     /// Fungsi bawaan dari Robocode, di sini tempat bot jalan
     /// </summary>
     public override void Run() {
-        // Ngatur warna
+        // Ngatur warna 
         BodyColor = Color.Red;
         TracksColor = Color.Cyan;
         TurretColor = Color.Red;
@@ -48,13 +47,8 @@ public class NayakaBot : Bot
                 totalGaya += Titik.Value.Gaya;
             }
 
-            // ngarahin bot ke arah totalGaya
-            //SetTurnRightRadians(totalGaya.getDirection() - HeadingRadians);
-
-            if (FoundMungsuh && GunHeat == 0 && Math.Abs(GunTurnRemaining) < 5) {
-                SetFire(1);
-                FoundMungsuh = false;
-            }
+            Gerak();
+            Tembak();
             Go();
         }
     }
@@ -72,8 +66,11 @@ public class NayakaBot : Bot
         }
 
 
-        FoundMungsuh = true;
-        SetTurnGunLeft(GunBearingTo(e.X, e.Y));
+        // update mungsuh
+        if (Mungsuh.IsEmpty() || Mtk.CalcDistance(e.X, e.Y, this.X, this.Y) <= Mungsuh.Distance || e.ScannedBotId == Mungsuh.ID) {
+            Mungsuh.Update(e, this.X, this.Y);
+        } 
+
         //Console.WriteLine(GunBearingTo(evt.X, evt.Y));
         //Console.WriteLine(Math.Atan((evt.X - this.X) / (evt.Y - this.Y)) * (180/Math.PI));
     }
@@ -84,7 +81,7 @@ public class NayakaBot : Bot
     }
 
     public override void OnHitWall(HitWallEvent evt) {
-        Console.WriteLine("Nabrak tembok njir");
+        SetTurnLeft(180);
     }
 
     public override void OnHitBot(HitBotEvent evt) {
@@ -94,19 +91,63 @@ public class NayakaBot : Bot
     public override void OnBotDeath(BotDeathEvent b) {
         // ngehapus bot yang mati
         TitikGaya.Remove(b.VictimId);
+        // ngereset data musuh kalo yang mati itu musuh yang lagi diincer
+        if (Mungsuh.ID == b.VictimId) {
+            Mungsuh.Reset();
+        }
     }
 
     /// <summary>
     /// Fungsi pembantu
     /// </summary>
 
-    private static double ScaleBulletPower(double distance) {
-        double maxPower = 3.0;
-        double minDistance = 0;
-        double maxDistance = 60;
-        return maxPower * (1 - (distance - minDistance) / (maxDistance - minDistance));
+    private void Gerak() {
+        Vektor totalGaya = new Vektor(0, 0);
+        foreach (var Titik in TitikGaya) {
+            totalGaya += Titik.Value.Gaya;
+        }
+        double Direction = NormalizeRelativeAngle(totalGaya.GetDirection());
+        // jalannnn
+        SetTurnLeft(Direction);
+        WaitFor(new NextTurnCondition(this));
+        SetForward(totalGaya.GetLength());
+        WaitFor(new NextTurnCondition(this));
     }
 
+    private void Tembak() {
+        if (!Mungsuh.IsEmpty() && GunHeat == 0 && Math.Abs(GunTurnRemaining) < 10) {
+            double enemyVelocity = Mungsuh.Speed;
+            double enemyHeading = Mungsuh.Direction * Math.PI / 180;  // convert ke radians
+            double bulletSpeed = 20 - 3 * ScaleBulletPower(Mtk.CalcDistance(this.X, this.Y, Mungsuh.X, Mungsuh.Y));
+            double distance = Mungsuh.Distance;
+            double bulletPower = ScaleBulletPower(distance);
+            Console.WriteLine(bulletPower);
+            Titik t = PredictEnemyPosition();
+            SetTurnGunLeft(GunBearingTo(t.X, t.Y));
+            SetFire(bulletPower);
+        }
+        return;
+    }
+
+    private static double ScaleBulletPower(double distance) {
+        double maxPower = 3.0;
+        double maxDistance = 1000;
+        if (distance > maxDistance) {
+            distance = maxDistance-100;
+        }
+        return maxPower * (1 - distance / maxDistance);
+    }
+    
+    private Titik PredictEnemyPosition() {
+        double EnemyDistance = Mtk.CalcDistance(this.X, this.Y, Mungsuh.X, Mungsuh.Y);
+        double BulletSpeed = 20 - 3 * ScaleBulletPower(EnemyDistance);
+        double t = EnemyDistance / BulletSpeed + 5;
+        double enemyVelocity = Mungsuh.Speed;
+        double enemyHeading = Mungsuh.Direction;
+        double predictedX = Mungsuh.X + enemyVelocity * Math.Cos(enemyHeading * Math.PI/180) * t;
+        double predictedY = Mungsuh.Y + enemyVelocity * Math.Sin(enemyHeading * Math.PI/180) * t;
+        return new Titik(predictedX, predictedY);
+    }
 }
 
 /// <summary>
@@ -168,6 +209,16 @@ class MungsuhBot {
             return this.ID == -1;
         }
     }
+
+
+class Titik {
+    public double X { get; set; }
+    public double Y { get; set; }
+    public Titik(double x, double y) {
+        this.X = x;
+        this.Y = y;
+    }
+}
 
 
 class Vektor
