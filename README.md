@@ -1,7 +1,12 @@
 # Tubes1_Ambatutank
 ![Ambatutank](Screenshot%20From%202025-03-20%2002-55-16.png)
 # Deskripsi
-
+Teng teng teng teng ambatuteng. Repository ini berisi algoritma bot untuk permainan Robocode untuk memenuhi tugas besar strategi algoritma.
+# Algoritma
+1. Untuk alt-bot-1, algoritma menggunakan strategi untuk bertahan hidup selama mungkin dengan effort sekecil mungkin. Digunakan Artificial potential field path planning untuk algoritma menembak.
+2. Untuk alt-bot-2, algoritma menggunakan strategi untuk menembak energi terendah.
+3. Untuk alt-bot-3, algoritma menggunakan strategi untuk menembak musuh dengan lokasi terdekat dan juga melakukan ramming terhadap arah peluru.
+4. Untuk main-bot, 
 # Instalasi dan Penggunaan
 1. Pastikan Java sudah terinstall di komputer. Jika belum, silahkan mengunduhnya di [sini](https://www.java.com/en/download/).
 2. Clone repository ini:
