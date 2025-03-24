@@ -10,10 +10,12 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 public class AramBot : Bot
 {
-    private double closest = double.POSITIVE_INFINITY;
-    private double closestBearing = 0;
+    private int perpID = null;
+    private double closest = double.MaxValue;
+    private double closestDir = 0.0;
     private bool hit = false;
-    private string perpName = null;
+    private double perpDir = 0.0;
+
     // The main method starts our bot
     static void Main(string[] args)
     {
@@ -49,13 +51,15 @@ public class AramBot : Bot
         // Send RobotColors object to every member in the team
         BroadcastTeamMessage(colors);
 
-        // Set the radar to turn right forever
-        SetTurnRadarRight(Double.PositiveInfinity);
-
         // Repeat while the bot is running
-        while (IsRunning)
-        {  
-            execute();
+        while (true){
+            closest = double.MaxValue
+            closestDir = 0.0;
+            TurnRadarRight(360);
+            if (GunHeat == 0){
+                TurnGunRight(NormalizeRelativeAngle(closestDir - GunDirection));
+                Fire(3);
+            }
         }
     }
 
@@ -64,23 +68,18 @@ public class AramBot : Bot
     {
         if (!hit){
             if (evt.Distance < closest){
-                closest = evt.getDistance();
-                closestBearing = evt.getBearing();
-                absoluteBearing = getHeading() + closestBearing;
-                gunTurnAmount = normalRelativeAngleDegrees(absoluteBearing - getGunHeading())
-                setTurnGunRight(gunTurnAmount);
-                if (getGunHeat() == 0 && gunTurnAmount < 10 && gunTurnAmount > -10){
-                    Fire(3);
-                }
+                Point p1 = new Point(evt.X, evt.Y);
+                Point p2 = new Point(X, Y);
+                closest = findDistance(p1, p2);
+                closestDir = evt.Direction;
             }
         } else {
-            if (evt.getName() == perpName){
-                absoluteBearing = getHeading() + closestBearing;
-                turnAmount = normalRelativeAngleDegrees(absoluteBearing - getGunHeading())
-                setTurnRight(turnAmount);
-                setAhead(10000);
+            if (evt.ScannedBotId = perpID){
+                perpDir = evt.Direction;
                 hit = false;
-                perpName = null;
+                perpID = null;
+                TurnRight(perpDir);
+                Ahead(1000);
             }
         }
     }   
@@ -89,13 +88,14 @@ public class AramBot : Bot
     // Called when we have been hit by a bullet -> turn perpendicular to the bullet direction
     public override void OnHitByBullet(HitByBulletEvent evt)
     {
-        // Calculate the bullet bearing
-        double bulletBearing = CalcBearing(evt.Bullet.Direction);
-
-        // Turn perpendicular to the bullet direction
-        setTurnRight(bulletBearing);
+        perpID = evt.bullet.ownerId;
         hit = true;
-        perpName = evt.getName();
+        TurnRadarRight(360);
+
+    }
+
+    public double findDistance(Point p1, Point p2){
+        return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
     }
 }
 
