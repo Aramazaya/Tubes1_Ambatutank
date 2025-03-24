@@ -5,53 +5,39 @@ using Robocode.TankRoyale.BotApi;
 using Robocode.TankRoyale.BotApi.Events;
 
 // ------------------------------------------------------------------
-// AmbatuTank
+// NayakaBot
 // ------------------------------------------------------------------
-// <DESKRIPSI ALGORITMA GREEDY>
 // ------------------------------------------------------------------
-public class AmbatuTank : Bot
+public class NayakaBot : Bot
 {
     private Dictionary<int, TitikGaya> TitikGaya = new();
     private MungsuhBot Mungsuh = new();
-    // The main method starts our bot
-    static void Main(string[] args)
-    {
-        new AmbatuTank().Start();
+
+    static void Main(string[] args) {
+        new NayakaBot().Start();
     }
 
-    // Constructor, which loads the bot config file
-    AmbatuTank() : base(BotInfo.FromFile("main-bot.json")) { }
+    NayakaBot() : base(BotInfo.FromFile("main-bot.json")) { }
 
-    // Called when a new round is started -> initialize and do some movement
-    public override void Run()
-    {
-        // Prepare robot colors to send to teammates
-        var colors = new RobotColors();
+    /// <summary>
+    /// Fungsi bawaan dari Robocode, di sini tempat bot jalan
+    /// </summary>
+    public override void Run() {
+        // Ngatur warna 
+        BodyColor = Color.Red;
+        TracksColor = Color.Cyan;
+        TurretColor = Color.Red;
+        GunColor = Color.Yellow;
+        RadarColor = Color.Red;
+        ScanColor = Color.Yellow;
+        BulletColor = Color.Yellow;
 
-        colors.BodyColor = Color.Red;
-        colors.TracksColor = Color.Cyan;
-        colors.TurretColor = Color.Red;
-        colors.GunColor = Color.Yellow;
-        colors.RadarColor = Color.Red;
-        colors.ScanColor = Color.Yellow;
-        colors.BulletColor = Color.Yellow;
-
-        // Set the color of this robot containing the robot colors
-        BodyColor = colors.BodyColor;
-        TracksColor = colors.TracksColor;
-        TurretColor = colors.TurretColor;
-        GunColor = colors.GunColor;
-        RadarColor = colors.RadarColor;
-        ScanColor = colors.ScanColor;
-        BulletColor = colors.BulletColor;
-
-        // Send RobotColors object to every member in the team
-        BroadcastTeamMessage(colors);
-
-        // Set the radar to turn right forever
-        SetTurnRadarRight(Double.PositiveInfinity);
-
-        // Repeat while the bot is running
+        // Ini buat ngesetting supaya radar, gun, dan body bisa gerak sendiri-sendiri
+        AdjustGunForBodyTurn = true;
+        AdjustRadarForBodyTurn = true;
+        AdjustRadarForGunTurn = true;
+        RadarTurnRate = 10;
+        
         while (IsRunning) {
             TurnRadarRight(360);
 
@@ -60,12 +46,14 @@ public class AmbatuTank : Bot
             foreach (var Titik in TitikGaya) {
                 totalGaya += Titik.Value.Gaya;
             }
+
+            Gerak();
             Tembak();
             Go();
         }
     }
 
-    // Called when we scanned a bot -> Send enemy position to teammates
+
     public override void OnScannedBot(ScannedBotEvent e) {
         // cek apakah bot yang ketemu itu bot yang udah pernah ketemu atau belum
         if (TitikGaya.ContainsKey(e.ScannedBotId)) {
@@ -79,7 +67,7 @@ public class AmbatuTank : Bot
 
 
         // update mungsuh
-        if (Mungsuh.IsEmpty() || e.Energy > Mungsuh.Energy || e.ScannedBotId == Mungsuh.ID) {
+        if (Mungsuh.IsEmpty() || Mtk.CalcDistance(e.X, e.Y, this.X, this.Y) <= Mungsuh.Distance || e.ScannedBotId == Mungsuh.ID) {
             Mungsuh.Update(e, this.X, this.Y);
         } 
 
@@ -87,8 +75,17 @@ public class AmbatuTank : Bot
         //Console.WriteLine(Math.Atan((evt.X - this.X) / (evt.Y - this.Y)) * (180/Math.PI));
     }
 
+
+    public override void OnHitByBullet(HitByBulletEvent evt) {
+        Console.WriteLine("Kenak peluru njir");
+    }
+
     public override void OnHitWall(HitWallEvent evt) {
         SetTurnLeft(180);
+    }
+
+    public override void OnHitBot(HitBotEvent evt) {
+        Console.WriteLine("Nabrak bot lain njir");
     }
 
     public override void OnBotDeath(BotDeathEvent b) {
@@ -98,6 +95,23 @@ public class AmbatuTank : Bot
         if (Mungsuh.ID == b.VictimId) {
             Mungsuh.Reset();
         }
+    }
+
+    /// <summary>
+    /// Fungsi pembantu
+    /// </summary>
+
+    private void Gerak() {
+        Vektor totalGaya = new Vektor(0, 0);
+        foreach (var Titik in TitikGaya) {
+            totalGaya += Titik.Value.Gaya;
+        }
+        double Direction = NormalizeRelativeAngle(totalGaya.GetDirection());
+        // jalannnn
+        SetTurnLeft(Direction);
+        WaitFor(new NextTurnCondition(this));
+        SetForward(totalGaya.GetLength());
+        WaitFor(new NextTurnCondition(this));
     }
 
     private void Tembak() {
@@ -112,7 +126,6 @@ public class AmbatuTank : Bot
             SetTurnGunLeft(GunBearingTo(t.X, t.Y));
             SetFire(bulletPower);
         }
-        MoveToEnemy(Mungsuh.X, Mungsuh.Y);
         return;
     }
 
@@ -124,7 +137,7 @@ public class AmbatuTank : Bot
         }
         return maxPower * (1 - distance / maxDistance);
     }
-
+    
     private Titik PredictEnemyPosition() {
         double EnemyDistance = Mtk.CalcDistance(this.X, this.Y, Mungsuh.X, Mungsuh.Y);
         double BulletSpeed = 20 - 3 * ScaleBulletPower(EnemyDistance);
@@ -135,53 +148,15 @@ public class AmbatuTank : Bot
         double predictedY = Mungsuh.Y + enemyVelocity * Math.Sin(enemyHeading * Math.PI/180) * t;
         return new Titik(predictedX, predictedY);
     }
-
-    private void MoveToEnemy(double targetX, double targetY)
-    {
-        double angleToEnemy = DirectionTo(targetX, targetY);
-        TurnLeft(NormalizeRelativeAngle(angleToEnemy-Direction));
-        double offset = 45;
-        SetForward(150);
-        // for (int i = 0; i < 3; i++)
-        // {
-        SetTurnRight(offset);
-        WaitFor(new TurnCompleteCondition(this));
-        SetTurnLeft(2 * offset);
-        WaitFor(new TurnCompleteCondition(this));
-        SetTurnRight(offset);
-        // }
-    }
 }
 
-// ------------------------------------------------------------------
-// Communication objects for team messages
-// ------------------------------------------------------------------
+/// <summary>
+/// sorry males bikin file baru
+/// di bawah ini isinya class-class pembantu
+/// </summary>
 
-// Point (x,y) class
-class Point
-{
-    public double X { get; set; }
-    public double Y { get; set; }
-
-    public Point(double x, double y)
-    {
-        X = x;
-        Y = y;
-    }
-}
-
-// Robot colors
-class RobotColors
-{
-    public Color BodyColor { get; set; }
-    public Color TracksColor { get; set; }
-    public Color TurretColor { get; set; }
-    public Color GunColor { get; set; }
-    public Color RadarColor { get; set; }
-    public Color ScanColor { get; set; }
-    public Color BulletColor { get; set; }
-}
-
+// bot buat nyimpen data musuh yang lagi diincer
+// ini bahasa jawanya musuh
 class MungsuhBot {
         public int ID { get; set; }
         public double X { get; set; }
@@ -235,6 +210,7 @@ class MungsuhBot {
         }
     }
 
+
 class Titik {
     public double X { get; set; }
     public double Y { get; set; }
@@ -243,6 +219,7 @@ class Titik {
         this.Y = y;
     }
 }
+
 
 class Vektor
 {
@@ -337,18 +314,3 @@ class Mtk
     }
 }
 
-public class TurnCompleteCondition : Condition
-{
-    private readonly Bot bot;
-
-    public TurnCompleteCondition(Bot bot)
-    {
-        this.bot = bot;
-    }
-
-    public override bool Test()
-    {
-        // turn is complete when the remainder of the turn is zero
-        return bot.TurnRemaining == 0;
-    }
-}
