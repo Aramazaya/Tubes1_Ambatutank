@@ -23,7 +23,7 @@ public class AramBot : Bot
     AramBot() : base(BotInfo.FromFile("alt-bot-3.json")) { }
     public override void Run()
     {
-        BodyColor = Color.Red;
+        BodyColor = Color.Maroon;
         TracksColor = Color.Cyan;
         TurretColor = Color.Red;
         GunColor = Color.Black;

@@ -28,7 +28,7 @@ public class AmbatuTank : Bot
         // Prepare robot colors to send to teammates
         var colors = new RobotColors();
 
-        colors.BodyColor = Color.Red;
+        colors.BodyColor = Color.Olive;
         colors.TracksColor = Color.Cyan;
         colors.TurretColor = Color.Red;
         colors.GunColor = Color.Yellow;

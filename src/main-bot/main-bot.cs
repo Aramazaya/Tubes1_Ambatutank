@@ -24,7 +24,7 @@ public class NayakaBot : Bot
     /// </summary>
     public override void Run() {
         // Ngatur warna 
-        BodyColor = Color.Red;
+        BodyColor = Color.RoyalBlue;
         TracksColor = Color.Cyan;
         TurretColor = Color.Red;
         GunColor = Color.Yellow;
