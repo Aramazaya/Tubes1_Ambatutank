@@ -28,32 +28,19 @@ public class AramBot : Bot
     // Called when a new round is started -> initialize and do some movement
     public override void Run()
     {
-        // Prepare robot colors to send to teammates
-        var colors = new RobotColors();
-
-        colors.BodyColor = Color.Red;
-        colors.TracksColor = Color.Cyan;
-        colors.TurretColor = Color.Red;
-        colors.GunColor = Color.Yellow;
-        colors.RadarColor = Color.Red;
-        colors.ScanColor = Color.Yellow;
-        colors.BulletColor = Color.Yellow;
 
         // Set the color of this robot containing the robot colors
-        BodyColor = colors.BodyColor;
-        TracksColor = colors.TracksColor;
-        TurretColor = colors.TurretColor;
-        GunColor = colors.GunColor;
-        RadarColor = colors.RadarColor;
-        ScanColor = colors.ScanColor;
-        BulletColor = colors.BulletColor;
-
-        // Send RobotColors object to every member in the team
-        BroadcastTeamMessage(colors);
+        BodyColor = Color.Red;
+        TracksColor = Color.Cyan;
+        TurretColor = Color.Red;
+        GunColor = Color.Black;
+        RadarColor = Color.Red;
+        ScanColor = Color.Yellow;
+        BulletColor = Color.Yellow;
 
         // Repeat while the bot is running
-        while (true){
-            closest = double.MaxValue
+        while (IsRunning){
+            closest = double.MaxValue;
             closestDir = 0.0;
             TurnRadarRight(360);
             if (GunHeat == 0){
@@ -97,6 +84,17 @@ public class AramBot : Bot
     public double findDistance(Point p1, Point p2){
         return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
     }
+    private class Point
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+
+        public Point(double x, double y)
+        {
+            X = x;
+            Y = y;
+    }
+}
 }
 
 // ------------------------------------------------------------------
@@ -104,26 +102,4 @@ public class AramBot : Bot
 // ------------------------------------------------------------------
 
 // Point (x,y) class
-class Point
-{
-    public double X { get; set; }
-    public double Y { get; set; }
 
-    public Point(double x, double y)
-    {
-        X = x;
-        Y = y;
-    }
-}
-
-// Robot colors
-class RobotColors
-{
-    public Color BodyColor { get; set; }
-    public Color TracksColor { get; set; }
-    public Color TurretColor { get; set; }
-    public Color GunColor { get; set; }
-    public Color RadarColor { get; set; }
-    public Color ScanColor { get; set; }
-    public Color BulletColor { get; set; }
-}
