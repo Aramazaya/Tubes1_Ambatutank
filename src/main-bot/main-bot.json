@@ -2,9 +2,9 @@
   "name": "AmbatuTank",
   "version": "1.0",
   "authors": [
-    "Aram", "Ian", "Nayaka"
+    "Nayaka"
   ],
-  "description": "A bot that shoots at the strongest enemy",
+  "description": "A bot that focuses on Lazy Survival",
   "homepage": "",
   "countryCodes": [
     "id"

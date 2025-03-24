@@ -1,10 +1,10 @@
 {
-  "name": "NayakaBot",
-  "version": "1.0",
+  "name": "AmbatuTank",
+  "version": "0.4",
   "authors": [
-    "Nayaka"
+    "Nayaka", "Ian", "Aram"
   ],
-  "description": "TODO",
+  "description": "A tank that focuses on the enemy with the strongest energy",
   "homepage": "",
   "countryCodes": [
     "id"
