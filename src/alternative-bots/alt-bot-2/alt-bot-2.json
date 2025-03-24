@@ -4,7 +4,7 @@
   "authors": [
     "Ian"
   ],
-  "description": "A tank that shoots depending on enemy distance",
+  "description": "A tank that shoots weaker energy targets",
   "homepage": "",
   "countryCodes": [
     "id"
