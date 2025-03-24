@@ -6,95 +6,89 @@ using Robocode.TankRoyale.BotApi.Events;
 // ------------------------------------------------------------------
 // AramBot
 // ------------------------------------------------------------------
-// <DESKRIPSI ALGORITMA GREEDY>
+// Bot akan melakukan ramming ke arah peluru ketika kena hit, Bot akan menembak dengan power 3 musuh terdekat
 // ------------------------------------------------------------------
 public class AramBot : Bot
 {
-    private int perpID = null;
+    private int perpID = 0;
+    private Point closestPoint = null;
     private double closest = double.MaxValue;
     private double closestDir = 0.0;
     private bool hit = false;
-    private double perpDir = 0.0;
-
-    // The main method starts our bot
+    private Point perpDir = null;
     static void Main(string[] args)
     {
         new AramBot().Start();
     }
-
-    // Constructor, which loads the bot config file
     AramBot() : base(BotInfo.FromFile("alt-bot-3.json")) { }
-
-    // Called when a new round is started -> initialize and do some movement
     public override void Run()
     {
-
-        // Set the color of this robot containing the robot colors
         BodyColor = Color.Red;
         TracksColor = Color.Cyan;
         TurretColor = Color.Red;
         GunColor = Color.Black;
         RadarColor = Color.Red;
         ScanColor = Color.Yellow;
-        BulletColor = Color.Yellow;
-
-        // Repeat while the bot is running
+        BulletColor = Color.Black;
         while (IsRunning){
-            closest = double.MaxValue;
-            closestDir = 0.0;
-            TurnRadarRight(360);
-            if (GunHeat == 0){
-                TurnGunRight(NormalizeRelativeAngle(closestDir - GunDirection));
-                Fire(3);
+            if (!hit)           //Ketika Bot tidak sedang melakukan ramming, bot akan menembak musuh terdekat dan diam
+            {
+                TurnRadarRight(360);
+                if (GunHeat == 0)
+                {
+                    closestDir = DirectionTo(closestPoint.X, closestPoint.Y);
+                    double bearing = NormalizeRelativeAngle(closestDir - GunDirection);
+                    TurnGunLeft(bearing);
+                    Fire(3);
+                }
+                closest = double.MaxValue;
+                closestDir = 0.0;
             }
         }
     }
-
-    // Called when we scanned a bot -> Send enemy position to teammates
     public override void OnScannedBot(ScannedBotEvent evt)
     {
-        if (!hit){
-            if (evt.Distance < closest){
-                Point p1 = new Point(evt.X, evt.Y);
-                Point p2 = new Point(X, Y);
-                closest = findDistance(p1, p2);
-                closestDir = evt.Direction;
+        if (!hit){                                              //Ketika Bot tidak sedang ramming, Bot akan mencari scanned enemy terdekat untuk dijadikan target tembakan
+            Point p1 = new Point(evt.X, evt.Y);
+            Point p2 = new Point(X, Y);
+            double eventDistance = FindDistance(p1, p2);
+            if (eventDistance < closest){
+                closest = eventDistance;
+                closestPoint = new Point(evt.X, evt.Y);
             }
-        } else {
-            if (evt.ScannedBotId = perpID){
-                perpDir = evt.Direction;
+        } else {                                                //Ketika Bot terkena Hit, Bot akan melakukan ramming
+            if (evt.ScannedBotId == perpID){
+                perpDir = new Point(evt.X, evt.Y);
+                TurnLeft(NormalizeRelativeAngle(DirectionTo(perpDir.X, perpDir.Y)-Direction));
+                Forward(500);
                 hit = false;
-                perpID = null;
-                TurnRight(perpDir);
-                Ahead(1000);
+                perpID = 0;
             }
         }
     }   
-
-
-    // Called when we have been hit by a bullet -> turn perpendicular to the bullet direction
-    public override void OnHitByBullet(HitByBulletEvent evt)
+    public override void OnHitByBullet(HitByBulletEvent evt)            //Ketika Bot terkena tembakan, Bot akan melakukan Radar search
     {
-        perpID = evt.bullet.ownerId;
+        perpID = evt.Bullet.OwnerId;
         hit = true;
         TurnRadarRight(360);
 
     }
-
-    public double findDistance(Point p1, Point p2){
+    public override void OnHitBot(HitBotEvent botHitBotEvent)           //Ketika Bot mengenai musuh, Bot akan merotasi turret dan menembak ke arah victim bot
+    {
+        TurnRadarRight(45);
+        TurnRadarLeft(90);
+        closestDir = DirectionTo(closestPoint.X, closestPoint.Y);
+        double bearing = NormalizeRelativeAngle(closestDir - GunDirection);
+        TurnGunLeft(bearing);
+        if (GunHeat == 0) { Fire(3); }
+    }
+    public override void OnHitWall(HitWallEvent botHitWallEvent)        //Ketika Bot mengenai wall, lakukan mundur 50 langkah
+    {
+        Back(50);
+    }
+    static double FindDistance(Point p1, Point p2){
         return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
     }
-    private class Point
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-
-        public Point(double x, double y)
-        {
-            X = x;
-            Y = y;
-    }
-}
 }
 
 // ------------------------------------------------------------------
@@ -103,3 +97,14 @@ public class AramBot : Bot
 
 // Point (x,y) class
 
+class Point
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+
+    public Point(double x, double y)
+    {
+        X = x;
+        Y = y;
+    }
+}
